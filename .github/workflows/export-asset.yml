@@ -1,4 +1,4 @@
-name: Sync persistent store
+name: Export assets
 
 on:
   workflow_dispatch:
