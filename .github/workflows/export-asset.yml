@@ -44,8 +44,8 @@ jobs:
           chmod +x ./AssetStudioModCLI
           EXPORT_DIR="${{ github.workspace }}/export"
           mkdir -p "$EXPORT_DIR"
-          ./AssetStudioModCLI "${{ env.PERSISTENT_STORE }}" -t "tex2d" --image-format "webp" -o "$EXPORT_DIR"
-          ./AssetStudioModCLI "${{ env.INSTALL_RESOURCE }}" -t "tex2d" --image-format "webp" -o "$EXPORT_DIR"
+          ./AssetStudioModCLI "${{ github.workspace }}/${{ env.PERSISTENT_STORE }}" -t "tex2d" --image-format "webp" -o "$EXPORT_DIR"
+          ./AssetStudioModCLI "${{ github.workspace }}/${{ env.INSTALL_RESOURCE }}" -t "tex2d" --image-format "webp" -o "$EXPORT_DIR"
         shell: bash
 
       - name: Show exported files
