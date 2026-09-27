@@ -1,0 +1,34 @@
+name: Sync install resource
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch-resources:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Cache InstallResource
+        uses: actions/cache@v6
+        with:
+          path: download
+          key: ss-install-resource-${{ github.run_id }}
+          restore-keys: ss-install-resource-
+            
+          
+      - name: Run scripts
+        run: node download.js
+        shell: bash
+        
