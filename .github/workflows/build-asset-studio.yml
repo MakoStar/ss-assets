@@ -1,0 +1,61 @@
+name: Build AssetStudio
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-asset-studio:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Clone AssetStudio
+        run: |
+          git clone --depth 1 https://github.com/NowhereArchive/AssetStudio.git as-source
+        shell: bash
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        working-directory: as-source/AssetStudioCLI
+        run: dotnet restore -p:TargetFramework=net10.0 -p:RuntimeIdentifier=linux-x64
+        shell: bash
+
+      - name: Build CLI
+        working-directory: as-source/AssetStudioCLI
+        run: |
+          dotnet publish -c Release -f net10.0 -r linux-x64 \
+            --self-contained false \
+            --no-restore \
+            -o "${{ github.workspace }}/as-dist"
+        shell: bash
+
+      - name: Copy build output to AssetStudioModCli/
+        run: |
+          rm -rf AssetStudioModCli
+          mkdir -p AssetStudioModCli
+          cp -r as-dist/. AssetStudioModCli/
+        shell: bash
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add AssetStudioModCli
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update AssetStudio CLI"
+            git push
+          fi
+        shell: bash
