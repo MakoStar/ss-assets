@@ -1,0 +1,141 @@
+name: Sync persistent store
+
+on:
+  workflow_dispatch:
+
+permissions:
+      contents: write 
+
+env:
+  UNPACK_FILE_DIRECTORY: ManifestTool/output/Unpack
+  MANIFEST_VERSION_FILE: ManifestTool/output/Manifest/version.json
+
+  BACKUP_UNPACK_DIRECTORY: /tmp/old_manifest/Unpack
+  BACKUP_MANIFEST_VERSION_FILE: /tmp/old_manifest/version.json
+
+jobs:
+  retrieve-manifest:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          
+      - name: Restore cache (manifest)
+        uses: actions/cache/restore@v6
+        with:
+          path: ManifestTool/output
+          key: ss-manifest-default
+          restore-keys: ss-manifest-
+
+      - name: Backup previous manifest version
+        run: |
+          if [ -f "${{ env.MANIFEST_VERSION_FILE }}" ]; then
+            mkdir -p $(dirname "${{ env.BACKUP_MANIFEST_VERSION_FILE }}")
+            cp ${{ env.MANIFEST_VERSION_FILE }} ${{ env.BACKUP_MANIFEST_VERSION_FILE }}
+            echo "HAS_PREVIOUS_MANIFEST=true" >> $GITHUB_ENV
+          else
+            echo "HAS_PREVIOUS_MANIFEST=false" >> $GITHUB_ENV
+          fi
+        shell: bash
+      
+      - name: Backup previous unpack directory
+        run: |
+          if [ -d "${{ env.UNPACK_FILE_DIRECTORY }}" ]; then
+            mkdir -p "${{ env.BACKUP_UNPACK_DIRECTORY }}"
+            cp -r "${{ env.UNPACK_FILE_DIRECTORY }}"/. "${{ env.BACKUP_UNPACK_DIRECTORY }}"/
+            echo "HAS_PREVIOUS_UNPACK=true" >> $GITHUB_ENV
+          else
+              echo "HAS_PREVIOUS_UNPACK=false" >> $GITHUB_ENV
+          fi
+        shell: bash
+
+      - name: Run resource tool
+        id: run-resource-tool
+        working-directory: ResourceTool
+        run: |
+          if [ -f "ss-resource-fetcher.toml" ]; then
+            echo "config_exist=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "config_exist=false" >> "$GITHUB_OUTPUT"
+          fi
+          chmod +x ./ResourceFetcher && ./ResourceFetcher
+        shell: bash
+
+      - name: Compare version.json changes
+        id: compare-version-file
+        run: |
+          if [ "$HAS_PREVIOUS_MANIFEST" == "true" ]; then
+            OLD_VERSION="${{ env.BACKUP_MANIFEST_VERSION_FILE }}"
+            NEW_VERSION=${{ env.MANIFEST_VERSION_FILE }}
+
+            if ! cmp -s "$OLD_VERSION" "$NEW_VERSION"; then
+              echo "version changed"
+              echo "changed=true" >> $GITHUB_OUTPUT
+            else
+              echo "version unchanged"
+              echo "changed=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "version changed (no previous version)"
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+
+      - name: Compare unpack directory changes
+        id: compare-unpack-dir
+        if: steps.compare-version-file.outputs.changed == 'false'
+        run: |
+          if [ "$HAS_PREVIOUS_UNPACK" == "true" ]; then
+            OLD_UNPACK="${{ env.BACKUP_UNPACK_DIRECTORY }}"
+            NEW_UNPACK="${{ env.UNPACK_FILE_DIRECTORY }}"
+
+            if ! diff -rq "$OLD_UNPACK" "$NEW_UNPACK" > /dev/null 2>&1; then
+              echo "unpack directory changed"
+              echo "changed=true" >> $GITHUB_OUTPUT
+            else
+              echo "unpack directory unchanged"
+              echo "changed=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "unpack directory changed (no previous unpack)"
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+
+      - name: Evaluate manifest change flag
+        id: evaluate-change-flag
+        run: |
+          if [[ "${{ steps.compare-version-file.outputs.changed }}" == "true" ]] \
+            || [[ "${{ steps.compare-unpack-dir.outputs.changed }}" == "true" ]]; then
+            echo "flag=true" >> "$GITHUB_OUTPUT"
+            echo "manifest changed (version-file or unpack-dir)"
+          else
+            echo "flag=false" >> "$GITHUB_OUTPUT"
+            echo "manifest unchanged, skipping cache save"
+          fi
+        shell: bash
+         
+      - name: Save manifest cache
+        if: steps.evaluate-change-flag.outputs.flag == 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ResourceTool/output
+          key: ss-manifest-${{ hashFiles(env.MANIFEST_VERSION_FILE, env.UNPACK_FILE_DIRECTORY) }}
+      
+      - name: Commit resource tool config
+        if: steps.run-resource-tool.outputs.config_exist == 'false'
+        uses: stefanzweifel/git-auto-commit-action@v6
+        with:
+          commit_message: "update: ss-resource-fetcher.toml"
+          file_pattern: "ResourceTool/ss-resource-fetcher.toml"
+
+      - name: Refresh cache TTL on no data change
+        if: steps.evaluate-change-flag.outputs.flag == 'false'
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          repo: MakoStar/ss-assets
+          workflow: refresh-cache.yml
+          token: ${{ secrets.GH_TOKEN }}
