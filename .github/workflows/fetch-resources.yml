@@ -14,7 +14,7 @@ env:
   BACKUP_MANIFEST_VERSION_FILE: /tmp/old_manifest/version.json
 
 jobs:
-  retrieve-manifest:
+  fetch-resources:
     runs-on: ubuntu-latest
     
     steps:
