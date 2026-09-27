@@ -1,0 +1,60 @@
+name: Sync persistent store
+
+on:
+  workflow_dispatch:
+
+permissions:
+      contents: write 
+
+env:
+  INSTALL_RESOURCE: download
+  PERSISTENT_STORE: ResourceTool/output/Unpack/CN
+  
+  UNPACK_FILE_DIRECTORY: ResourceTool/output/Unpack
+  MANIFEST_VERSION_FILE: ResourceTool/output/Manifest/version.json
+
+jobs:
+  export-asset:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          
+      - name: Restore cache (PersistentStore)
+        uses: actions/cache/restore@v6
+        with:
+          path: ResourceTool/output
+          key: ss-manifest-default
+          restore-keys: ss-manifest-
+
+      - name: Restore cache (InstallResource)
+        uses: actions/cache/restore@v6
+        with:
+          path: download
+          key: ss-install-resource-default
+          restore-keys: ss-install-resource-
+
+      - name: Run AssetStudioModCli
+        id: run-asset-studio-tool
+        working-directory: AssetStudioModCli
+        run: |
+          chmod +x ./AssetStudioModCLI
+          EXPORT_DIR="${{ github.workspace }}/export"
+          mkdir -p "$EXPORT_DIR"
+          ./AssetStudioModCLI "${{ env.PERSISTENT_STORE }}" -t "tex2d" --image-format "webp" -o "$EXPORT_DIR"
+          ./AssetStudioModCLI "${{ env.INSTALL_RESOURCE }}" -t "tex2d" --image-format "webp" -o "$EXPORT_DIR"
+        shell: bash
+
+      - name: Show exported files
+        run: |
+          echo "=== export/ contents ==="
+          find export -type f -printf '%s\t%p\n' | sort -k2 | awk '{ printf "%10d  %s\n", $1, $2 }'
+          echo "=== total size ==="
+          du -sh export
+          echo "=== file count ==="
+          find export -type f | wc -l
+        shell: bash
+      
