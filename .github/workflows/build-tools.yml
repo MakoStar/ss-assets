@@ -1,0 +1,56 @@
+name: Build tools
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-commit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Checkout ss-tools
+        uses: actions/checkout@v6
+        with:
+          repository: MakoStar/ss-resource-fetcher
+          path: ss-tools
+          ref: main
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ss-tools/target
+          key: cargo-cache-${{ hashFiles('ss-tools/Cargo.lock') }}
+          restore-keys: cargo-cache-
+
+      - name: Build release
+        run: cargo build -p ss-resource-fetcher --release
+        working-directory: ss-tools
+
+      - name: Copy tool to target location
+        run: |
+          mkdir -p ResourceTool
+          cp ss-tools/target/release/ResourceFetcher ResourceTool/
+
+      - name: Commit and push binary
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ResourceTool/ResourceFetcher
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "update: tool"
+            git push
+          fi
