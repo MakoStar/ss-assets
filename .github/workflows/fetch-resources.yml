@@ -7,8 +7,8 @@ permissions:
       contents: write 
 
 env:
-  UNPACK_FILE_DIRECTORY: ManifestTool/output/Unpack
-  MANIFEST_VERSION_FILE: ManifestTool/output/Manifest/version.json
+  UNPACK_FILE_DIRECTORY: ResourceTool/output/Unpack
+  MANIFEST_VERSION_FILE: ResourceTool/output/Manifest/version.json
 
   BACKUP_UNPACK_DIRECTORY: /tmp/old_manifest/Unpack
   BACKUP_MANIFEST_VERSION_FILE: /tmp/old_manifest/version.json
