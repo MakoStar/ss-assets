@@ -118,7 +118,7 @@ jobs:
           fi
         shell: bash
          
-      - name: Save manifest cache
+      - name: Save resource cache
         if: steps.evaluate-change-flag.outputs.flag == 'true'
         uses: actions/cache/save@v6
         with:
@@ -131,6 +131,14 @@ jobs:
         with:
           commit_message: "update: ss-resource-fetcher.toml"
           file_pattern: "ResourceTool/ss-resource-fetcher.toml"
+
+      - name: Dispatch ss-assets/export-asset
+        if: steps.evaluate-change-flag.outputs.flag == 'true'
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          repo: MakoStar/ss-assets
+          workflow: export-asset.yml
+          token: ${{ secrets.GH_TOKEN }}
 
       - name: Refresh cache TTL on no data change
         if: steps.evaluate-change-flag.outputs.flag == 'false'
