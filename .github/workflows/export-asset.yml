@@ -27,15 +27,15 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: ResourceTool/output
-          key: ss-manifest-default
-          restore-keys: ss-manifest-
+          key: ss-resource-default
+          restore-keys: ss-resource-
 
-      - name: Restore cache (InstallResource)
-        uses: actions/cache/restore@v6
-        with:
-          path: download
-          key: ss-install-resource-default
-          restore-keys: ss-install-resource-
+      # - name: Restore cache (InstallResource)
+      #   uses: actions/cache/restore@v6
+      #   with:
+      #     path: download
+      #     key: ss-install-resource-default
+      #     restore-keys: ss-install-resource-
 
       - name: Run AssetStudioModCli
         id: run-asset-studio-tool
