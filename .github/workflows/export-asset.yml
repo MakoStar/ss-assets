@@ -128,3 +128,11 @@ jobs:
           fi
         shell: bash
       
+      - name: Dispatch gen dating events data
+        if: steps.run-asset-studio-tool.outputs.updated == 'true'
+        uses: peter-evans/repository-dispatch@v4
+        with:
+         token: ${{ secrets.GH_TOKEN }}
+         repository: MakoStar/ss-dating
+         event-type: asset-updated
+         # client-payload: ${{ steps.commit-update-data.outputs.payload }}
