@@ -73,7 +73,7 @@ jobs:
           chmod +x ./AssetStudioModCLI
           EXPORT_DIR="${{ github.workspace }}/new-export"
           mkdir -p "$EXPORT_DIR"
-          ./AssetStudioModCLI "${{ github.workspace }}/diff-resource" -t "tex2d" --image-format "webp" -o "$EXPORT_DIR"
+          ./AssetStudioModCLI "${{ github.workspace }}/diff_out" -t "tex2d" --image-format "webp" -o "$EXPORT_DIR"
           
           if [ "$(ls -A "$EXPORT_DIR" 2>/dev/null)" ]; then
             echo "AssetStudio output has files, updating status..."
