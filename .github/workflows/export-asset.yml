@@ -22,6 +22,10 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 1
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
           
       - name: Restore cache (PersistentStore)
         uses: actions/cache/restore@v6
@@ -30,6 +34,30 @@ jobs:
           key: ss-resource-default
           restore-keys: ss-resource-
 
+      - name: Restore cache (old PersistentStore)
+        uses: actions/cache/restore@v6
+        with:
+          path: diff-resource
+          key: ss-diff-resource-default
+          restore-keys: ss-diff-resource-
+
+      - name: Run resource diff scripts
+        id: run-resource-diff
+        run: |
+          DIR_A="diff-resource"
+          DIR_B="${{ env.PERSISTENT_STORE }}"
+          OUT_DIR="./diff_out"
+          [ -d "$DIR_A" ] || mkdir -p "$DIR_A"
+          node scripts/resource-diff.cjs -a "$DIR_A" -b "$DIR_B" -o "$OUT_DIR"
+
+          if [ "$(ls -A "$OUT_DIR" 2>/dev/null)" ]; then
+            echo "updated=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Resource diff output is empty, no update..."
+            echo "updated=false" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash
+  
       # - name: Restore cache (InstallResource)
       #   uses: actions/cache/restore@v6
       #   with:
@@ -39,22 +67,48 @@ jobs:
 
       - name: Run AssetStudioModCli
         id: run-asset-studio-tool
+        if: steps.run-resource-diff.outputs.updated == 'true'
         working-directory: AssetStudioModCli
         run: |
           chmod +x ./AssetStudioModCLI
           EXPORT_DIR="${{ github.workspace }}/new-export"
           mkdir -p "$EXPORT_DIR"
-          ./AssetStudioModCLI "${{ github.workspace }}/${{ env.PERSISTENT_STORE }}" -t "tex2d" --image-format "webp" -o "$EXPORT_DIR"
-          # ./AssetStudioModCLI "${{ github.workspace }}/${{ env.INSTALL_RESOURCE }}" -t "tex2d" --image-format "webp" -o "$EXPORT_DIR"
+          ./AssetStudioModCLI "${{ github.workspace }}/diff-resource" -t "tex2d" --image-format "webp" -o "$EXPORT_DIR"
+          
+          if [ "$(ls -A "$EXPORT_DIR" 2>/dev/null)" ]; then
+            echo "AssetStudio output has files, updating status..."
+            echo "updated=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "AssetStudio output is empty, no update..."
+            echo "updated=false" >> "$GITHUB_OUTPUT"
+          fi
         shell: bash
 
+      - name: Sync diff file
+        if: steps.run-resource-diff.outputs.updated == 'true'
+        run: |
+          DIR_A="diff-resource"
+          OUT_DIR="./diff_out"
+          echo "Resource diff output has files, updating cache dir..."
+          rsync -a "$OUT_DIR/" "$DIR_A/"
+        shell: bash
+
+      - name: Save cache (old PersistentStore)
+        if: steps.run-resource-diff.outputs.updated == 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: diff-resource
+          key: ss-diff-resource-${{ github.run_id }}
+
       - name: Sync new-export to export
+        if: steps.run-asset-studio-tool.outputs.updated == 'true'
         run: |
           mkdir -p export
-          rsync -av "new-export/" "export/"
+          rsync -av --exclude='*#*' "new-export/" "export/"
         shell: bash
 
       - name: Commit and push export/
+        if: steps.run-asset-studio-tool.outputs.updated == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
