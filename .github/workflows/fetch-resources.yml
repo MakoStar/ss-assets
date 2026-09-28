@@ -27,8 +27,8 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: ResourceTool/output
-          key: ss-manifest-default
-          restore-keys: ss-manifest-
+          key: ss-resource-default
+          restore-keys: ss-resource-
 
       - name: Backup previous manifest version
         run: |
@@ -123,7 +123,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: ResourceTool/output
-          key: ss-manifest-${{ hashFiles(env.MANIFEST_VERSION_FILE, env.UNPACK_FILE_DIRECTORY) }}
+          key: "ss-resource-${{ hashFiles(env.MANIFEST_VERSION_FILE, env.UNPACK_FILE_DIRECTORY) }}"
       
       - name: Commit resource tool config
         if: steps.run-resource-tool.outputs.config_exist == 'false'
