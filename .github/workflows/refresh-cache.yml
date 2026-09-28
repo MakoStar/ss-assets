@@ -5,7 +5,7 @@ on:
 
 env:
   CACHE_MANIFEST_DIR: ManifestTool/output
-  RESTORE_MANIFEST_KEY_PREFIX: ss-manifest-
+  RESTORE_MANIFEST_KEY_PREFIX: ss-resource-
   VERSION_JSON: ManifestTool/output/Manifest/version.json
 
 
@@ -19,11 +19,11 @@ jobs:
         with:
           fetch-depth: 1
 
-      # - name: Restore manifest cache
-      #   id: restore-manifest
-      #   uses: actions/cache/restore@v6
-      #   with:
-      #     path: "${{ env.CACHE_MANIFEST_DIR }}"
-      #     key: "${{ env.RESTORE_MANIFEST_KEY_PREFIX }}default"
-      #     restore-keys: "${{ env.RESTORE_MANIFEST_KEY_PREFIX }}"
+      - name: Restore resource cache
+        id: restore-resource
+        uses: actions/cache/restore@v6
+        with:
+          path: ResourceTool/output
+          key: ss-resource-default
+          restore-keys: ss-resource-
       
