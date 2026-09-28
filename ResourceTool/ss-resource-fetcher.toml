@@ -63,7 +63,7 @@ PATCH_VERSION_KEY = "BIN_DIFF_PATCH_VER"
 # ============================================================
 [REQUEST]
 VERIFY_TLS = false
-TIMEOUT_SECS = 180
+TIMEOUT_SECS = 220
 TOTAL_RETRIES = 2
 BACKOFF_FACTOR = 3
 POOL_MAX_IDLE = 50
