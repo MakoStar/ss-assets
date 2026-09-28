@@ -26,4 +26,10 @@ jobs:
           path: ResourceTool/output
           key: ss-resource-default
           restore-keys: ss-resource-
-      
+          
+      - name: Restore cache (old PersistentStore)
+        uses: actions/cache/restore@v6
+        with:
+          path: diff-resource
+          key: ss-diff-resource-default
+          restore-keys: ss-diff-resource-
